@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# =========================================================
+# === CUSTOM IGNORES FOR LAOUR CYCLE MANAGER PROJECT ===
+# =========================================================
+#
+# Ignore the locally installed Android SDK to prevent uploading it to Git.
+# This is the most important addition.
+/android-sdk/
