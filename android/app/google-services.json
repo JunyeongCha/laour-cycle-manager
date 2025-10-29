@@ -1,40 +1,21 @@
 {
   "project_info": {
-    "project_number": "759658600525",
-    "project_id": "flutter-template-test-b18af",
-    "storage_bucket": "flutter-template-test-b18af.firebasestorage.app"
+    "project_number": "1067581089201",
+    "project_id": "laour-cycle-manager",
+    "storage_bucket": "laour-cycle-manager.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:759658600525:android:14f843384594b1c9cce404",
+        "mobilesdk_app_id": "1:1067581089201:android:5e484a2be6aea1bb354990",
         "android_client_info": {
-          "package_name": "com.example.checklist_app"
+          "package_name": "com.vokdo.laour"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAXmPYW_KzKdjwkkPiM8nf9x6oGQmTMESI"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:759658600525:android:ceeafcdab333712dcce404",
-        "android_client_info": {
-          "package_name": "com.example.flutter_firebase_template"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAXmPYW_KzKdjwkkPiM8nf9x6oGQmTMESI"
+          "current_key": "AIzaSyA1L-T2T-H6XOFMYWqmihdUNXUu99UiLv4"
         }
       ],
       "services": {

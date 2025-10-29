@@ -1,15 +1,15 @@
+// android/app/build.gradle.kts
+
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
+    // Google 서비스 Gradle 플러그인을 추가합니다.
     id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
-    namespace = "com.example.flutter_firebase_template" // [수정]
+    namespace = "com.vokdo.laour" // 이전에 수정한 우리 앱의 고유 ID
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -23,10 +23,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.flutter_firebase_template" // [수정]
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.vokdo.laour" // 이전에 수정한 우리 앱의 고유 ID
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -35,8 +32,6 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -44,4 +39,18 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // 이 부분이 가장 중요합니다.
+    // Firebase BoM(Bill of Materials)을 가져옵니다.
+    // BoM을 사용하면 여러 Firebase 라이브러리 버전을 알아서 맞춰줍니다.
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+
+    // 사용할 Firebase 제품에 대한 종속성을 추가합니다.
+    // BoM을 사용할 때는 버전을 명시하지 않습니다.
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-messaging")
 }
