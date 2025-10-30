@@ -1,54 +1,59 @@
-// lib/models/user_profile.dart
+// lib/data/models/user_profile.dart
 
-/// Firestore의 'users' 컬렉션에 저장될 사용자 프로필 데이터 모델입니다.
-class UserProfile {
-  final String uid; // Firebase Auth의 사용자 고유 ID
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:laour_cycle_manager/domain/entities/user_profile.dart';
+
+// 이 클래스는 Firestore에 있는 사용자 프로필의 데이터 구조를 나타냅니다.
+class UserProfileModel {
+  final String uid;
   final String email;
-  final String displayName; // 이름 (닉네임)
-  final String userId; // 사용자가 직접 설정하는 아이디
-  final String dateOfBirth; // 생년월일 (YYYY-MM-DD)
-  final int completedItemsCount; // 사용자가 완료(체크)한 총 항목의 개수
+  final String? name;
+  final double targetGoal;
+  final double? secondTargetGoal;
+  final double totalEarnings;
 
-class UserProfile {
-    final String uid;
-    final String email;
-    final String? name;
-    final double targetGoal; // 1차 목표 금액
-    final double? secondTargetGoal; // 2차 목표 금액 (선택)
-    final double totalEarnings; // 전체 사이클 누적 수익
+  UserProfileModel({
+    required this.uid,
+    required this.email,
+    this.name,
+    required this.targetGoal,
+    this.secondTargetGoal,
+    required this.totalEarnings,
+  });
 
-    UserProfile({
-        required this.uid,
-        required this.email,
-        this.name,
-        this.targetGoal = 0.0, // 기본값 설정
-        this.secondTargetGoal,
-        this.totalEarnings = 0.0, // 기본값 설정
-    });
-}
+  // Firestore 문서로부터 UserProfileModel을 생성하는 factory 생성자입니다.
+  factory UserProfileModel.fromSnapshot(DocumentSnapshot snap) {
+    var data = snap.data() as Map<String, dynamic>;
+    return UserProfileModel(
+      uid: snap.id,
+      email: data['email'],
+      name: data['name'],
+      targetGoal: (data['targetGoal'] as num).toDouble(),
+      secondTargetGoal: (data['secondTargetGoal'] as num?)?.toDouble(),
+      totalEarnings: (data['totalEarnings'] as num).toDouble(),
+    );
+  }
 
-  /// UserProfile 객체를 Firestore에 저장하기 위해 Map<String, dynamic> 형태로 변환하는 메소드
-  Map<String, dynamic> toMap() {
+  // UserProfileModel 객체를 Firestore에 저장하기 위한 Map 형태로 변환합니다.
+  Map<String, dynamic> toJson() {
     return {
-      'uid': uid,
       'email': email,
-      'displayName': displayName,
-      'userId': userId,
-      'dateOfBirth': dateOfBirth,
-      'completedItemsCount': completedItemsCount,
-      // 참고: isSetupComplete, must_have_options 등은 AuthService에서 별도로 관리됩니다.
+      'name': name,
+      'targetGoal': targetGoal,
+      'secondTargetGoal': secondTargetGoal,
+      'totalEarnings': totalEarnings,
     };
   }
 
-  /// Firestore에서 가져온 Map<String, dynamic> 형태의 데이터를 UserProfile 객체로 변환하는 팩토리 생성자
-  factory UserProfile.fromMap(Map<String, dynamic> map) {
+  // 이 데이터 모델(Model)을 Domain 계층의 순수 객체(Entity)로 변환합니다.
+  UserProfile toEntity() {
     return UserProfile(
-      uid: map['uid'] ?? '',
-      email: map['email'] ?? '',
-      displayName: map['displayName'] ?? '',
-      userId: map['userId'] ?? '',
-      dateOfBirth: map['dateOfBirth'] ?? '',
-      completedItemsCount: map['completedItemsCount'] ?? 0,
+      uid: uid,
+      email: email,
+      name: name,
+      targetGoal: targetGoal,
+      secondTargetGoal: secondTargetGoal,
+      totalEarnings: totalEarnings,
     );
   }
 }

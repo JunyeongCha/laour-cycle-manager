@@ -1,102 +1,117 @@
-// lib/screens/my_info_screen.dart
+// lib/presentation/screens/settings/my_info_screen.dart
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter_firebase_template/services/auth_service.dart';
-import 'package:flutter_firebase_template/services/firestore_service.dart';
-import 'package:flutter_firebase_template/services/theme_provider.dart';
+import 'package:intl/intl.dart'; // 숫자 포맷팅을 위한 패키지
+import 'package:laour_cycle_manager/config/dependency_injection.dart';
+import 'package:laour_cycle_manager/domain/entities/user_profile.dart';
+import 'package:laour_cycle_manager/domain/usecases/get_current_user.dart';
 
-class MyInfoScreen extends StatefulWidget {
+class MyInfoScreen extends StatelessWidget {
   const MyInfoScreen({super.key});
 
   @override
-  State<MyInfoScreen> createState() => _MyInfoScreenState();
-}
-
-class _MyInfoScreenState extends State<MyInfoScreen> {
-  final FirestoreService _firestoreService = FirestoreService();
-  final AuthService _authService = AuthService();
-
-  late Future<DocumentSnapshot<Map<String, dynamic>>> _userInfoFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    final userId = _authService.currentUser?.uid;
-    if (userId != null) {
-      _userInfoFuture = _firestoreService.getUserDocument(userId);
-    } else {
-      _userInfoFuture = Future.error("로그인된 사용자를 찾을 수 없습니다.");
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final iconColor = Provider.of<ThemeProvider>(context).iconColor;
+    // GetCurrentUser Usecase를 DI 컨테이너에서 가져옵니다.
+    final getCurrentUser = getIt<GetCurrentUser>();
+    
+    // StreamBuilder를 사용하여 실시간으로 사용자 정보를 가져옵니다.
+    // 정보가 변경되면 화면이 자동으로 다시 그려집니다.
+    return StreamBuilder<UserProfile?>(
+      stream: getCurrentUser(),
+      builder: (context, snapshot) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('내 정보'),
+          ),
+          body: Builder( // Scaffold의 context를 사용하기 위해 Builder 위젯 추가
+            builder: (context) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+                return const Center(child: Text('사용자 정보를 불러올 수 없습니다.'));
+              }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('내 정보'),
-      ),
-      body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        future: _userInfoFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text('사용자 정보를 불러올 수 없습니다.'));
-          }
+              final user = snapshot.data!;
+              
+              // 목표 달성률 계산 (0으로 나누는 오류 방지)
+              final double progress = (user.targetGoal > 0) ? (user.totalEarnings / user.targetGoal) : 0.0;
+              // 숫자 포맷을 원화(₩)로 변경
+              final currencyFormat = NumberFormat.currency(locale: 'ko_KR', symbol: '₩');
 
-          final userData = snapshot.data!.data()!;
-          
-          return ListView(
-            padding: const EdgeInsets.all(16.0),
-            children: [
-              _buildInfoTile(
-                icon: Icons.badge_outlined,
-                title: '이름 (닉네임)',
-                subtitle: userData['displayName'] ?? '정보 없음',
-                iconColor: iconColor,
-              ),
-              _buildInfoTile(
-                icon: Icons.person_pin_outlined,
-                title: '아이디',
-                subtitle: userData['userId'] ?? '정보 없음',
-                iconColor: iconColor,
-              ),
-              _buildInfoTile(
-                icon: Icons.cake_outlined,
-                title: '생년월일',
-                subtitle: userData['dateOfBirth'] ?? '정보 없음',
-                iconColor: iconColor,
-              ),
-              _buildInfoTile(
-                icon: Icons.email_outlined,
-                title: '이메일',
-                subtitle: userData['email'] ?? '정보 없음',
-                iconColor: iconColor,
-              ),
-            ],
-          );
-        },
-      ),
+              return ListView(
+                padding: const EdgeInsets.all(16.0),
+                children: [
+                  _buildInfoTile(
+                    icon: Icons.badge_outlined,
+                    title: '이름',
+                    content: user.name ?? '이름 없음',
+                  ),
+                  _buildInfoTile(
+                    icon: Icons.email_outlined,
+                    title: '이메일',
+                    content: user.email,
+                  ),
+                  const Divider(height: 32, thickness: 1),
+                  
+                  // [추가] 목표 달성률 섹션
+                  Text(
+                    '💰 목표 달성률',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // 달성 금액 및 목표 금액 표시
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        currencyFormat.format(user.totalEarnings),
+                        style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      Text(
+                        currencyFormat.format(user.targetGoal),
+                        style: const TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // 프로그레스 바
+                  LinearProgressIndicator(
+                    value: progress.clamp(0.0, 1.0), // 값은 0과 1 사이로 제한
+                    minHeight: 12,
+                    borderRadius: BorderRadius.circular(6),
+                    backgroundColor: Colors.grey.shade300,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // 퍼센트 표시
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      '${(progress * 100).toStringAsFixed(1)}%',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ),
+                  // TODO: 2차 목표 설정 및 달성률 표시 기능 추가 예정
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
-
-  Widget _buildInfoTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color iconColor,
-  }) {
+  
+  // 정보 타일을 만드는 헬퍼 위젯
+  Widget _buildInfoTile({required IconData icon, required String title, required String content}) {
     return ListTile(
-      leading: Icon(icon, color: iconColor),
-      title: Text(title),
+      leading: Icon(icon, size: 28),
+      title: Text(title, style: const TextStyle(color: Colors.grey)),
       subtitle: Text(
-        subtitle,
-        style: const TextStyle(fontSize: 16),
+        content,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
       ),
     );
   }
