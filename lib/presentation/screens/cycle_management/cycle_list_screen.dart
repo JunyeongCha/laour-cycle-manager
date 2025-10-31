@@ -1,7 +1,7 @@
 // lib/presentation/screens/cycle_management/cycle_list_screen.dart
 
-import 'package.flutter/material.dart';
-import 'package:go_router/go_router.dart'; // 1. GoRouter 임포트
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:laour_cycle_manager/config/dependency_injection.dart';
 import 'package:laour_cycle_manager/presentation/view_models/cycle_list_viewmodel.dart';
 import 'package:provider/provider.dart';
@@ -16,12 +16,10 @@ class CycleListScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('나의 사이클 목록'),
-          // [추가] 마이페이지(설정) 화면으로 이동하는 버튼
           actions: [
             IconButton(
               icon: const Icon(Icons.settings),
               onPressed: () {
-                // 2. GoRouter를 사용하여 경로 이름으로 안전하게 이동
                 context.push('/myPage');
               },
             ),
@@ -53,8 +51,8 @@ class CycleListScreen extends StatelessWidget {
                     subtitle: Text('종목: ${cycle.ticker} | ${cycle.divisionCount}분할'),
                     // [수정] ListTile을 탭하면 사이클 상세 페이지로 이동
                     onTap: () {
-                      // 3. GoRouter를 사용하여 '/cycleDetail' 경로로 이동
-                      // state.extra를 통해 Cycle 객체를 통째로 전달합니다.
+                      // GoRouter를 사용하여 '/cycleDetail' 경로로 이동하면서
+                      // extra 프로퍼티에 cycle 객체를 통째로 전달합니다.
                       context.push('/cycleDetail', extra: cycle);
                     },
                     trailing: const Icon(Icons.arrow_forward_ios),
@@ -66,7 +64,6 @@ class CycleListScreen extends StatelessWidget {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            // [수정] GoRouter를 사용하여 새 사이클 추가 화면으로 이동
             context.push('/addCycle');
           },
           child: const Icon(Icons.add),

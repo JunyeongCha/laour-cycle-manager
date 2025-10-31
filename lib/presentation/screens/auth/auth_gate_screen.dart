@@ -71,7 +71,7 @@ class _LoggedInStateInitializerState extends State<_LoggedInStateInitializer> {
   Widget build(BuildContext context) {
     // 테마 로드가 끝나면, 우리가 만들 앱의 메인 화면인 CycleListScreen을 보여줍니다.
     // TODO: 나중에 이 부분을 DashboardScreen으로 변경할 예정입니다.
-    return const CycleListScreen();
+    return const DashboardScreen();
   }
 }
 
