@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:laour_cycle_manager/config/dependency_injection.dart';
 import 'package:laour_cycle_manager/domain/entities/user_profile.dart';
+import 'package:laour_cycle_manager/presentation/screens/cycle_management/trade_result_screen.dart';
 import 'package:laour_cycle_manager/presentation/view_models/dashboard_viewmodel.dart';
 import 'package:provider/provider.dart';
 
@@ -52,7 +53,7 @@ class DashboardScreen extends StatelessWidget {
                 if (user != null) _buildGoalProgressCard(context, user),
                 const SizedBox(height: 24),
 
-                // 3. [복원] 오늘의 통합 체크리스트
+                // 3. 오늘의 통합 체크리스트
                 Text('✅ 오늘의 할 일', style: Theme.of(context).textTheme.titleLarge),
                 const Divider(height: 16),
                 if (viewModel.tasks.isEmpty)
@@ -61,16 +62,26 @@ class DashboardScreen extends StatelessWidget {
                     child: Center(child: Text('오늘 해야 할 일이 없습니다!')),
                   )
                 else
-                  // ListView 안에 또다른 ListView.builder를 직접 넣을 수 없으므로,
-                  // Column과 map을 사용하여 위젯 목록을 생성합니다.
                   Column(
-                    children: viewModel.tasks.map((task) => CheckboxListTile(
-                      title: Text(task.description),
-                      value: task.isCompleted,
-                      onChanged: (bool? value) {
-                        // TODO: 체크박스 상태 변경 및 화면 이동 로직 구현
-                      },
-                    )).toList(),
+                    children: viewModel.tasks.map((task) {
+                      return CheckboxListTile(
+                        title: Text(task.description),
+                        value: task.isCompleted,
+                        onChanged: (bool? value) {
+                          // [핵심 수정] 할 일 종류에 따라 다른 행동 수행
+                          if (task.type == TaskType.enterResult) {
+                            // '어제 결과 입력' 클릭 시, ViewModel이 미리 계산해 둔
+                            // cycle과 guide 정보를 가지고 TradeResultScreen으로 이동합니다.
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (context) => TradeResultScreen(cycle: task.cycle, guide: task.guide),
+                            ));
+                          } else if (task.type == TaskType.placeOrder) {
+                            // '오늘 주문 등록'은 사용자가 직접 체크만 합니다.
+                            viewModel.toggleTaskCompletion(task);
+                          }
+                        },
+                      );
+                    }).toList(),
                   ),
                 const SizedBox(height: 24),
 

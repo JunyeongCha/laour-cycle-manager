@@ -1,11 +1,10 @@
 // lib/data/datasources/remote/cycle_remote_datasource.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:injectable/injectable.dart'; // 1. Injectable 패키지 임포트
+import 'package:injectable/injectable.dart'; // [핵심 수정] 빠져있던 '스티커 설명서' 임포트
 import 'package:laour_cycle_manager/data/models/cycle_model.dart';
-import 'package.laour_cycle_manager/data/models/trade_record_model.dart';
+import 'package:laour_cycle_manager/data/models/trade_record_model.dart';
 
-// 2. @lazySingleton: 이 클래스도 앱 전체에서 단 하나만 존재하도록 설정합니다.
 @lazySingleton
 class CycleRemoteDataSource {
   final FirebaseFirestore _firestore;
@@ -18,6 +17,14 @@ class CycleRemoteDataSource {
   Future<void> createNewCycle(CycleModel cycle) async {
     try {
       await _firestore.collection(_cyclesCollection).add(cycle.toJson());
+    } on FirebaseException {
+      rethrow;
+    }
+  }
+
+  Future<void> updateCycle(CycleModel cycle) async {
+    try {
+      await _firestore.collection(_cyclesCollection).doc(cycle.id).update(cycle.toJson());
     } on FirebaseException {
       rethrow;
     }

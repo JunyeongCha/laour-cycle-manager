@@ -4,45 +4,56 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import 'package:laour_cycle_manager/domain/entities/cycle.dart';
+import 'package:laour_cycle_manager/domain/entities/order_guide.dart';
 import 'package:laour_cycle_manager/domain/entities/user_profile.dart';
+import 'package:laour_cycle_manager/domain/repositories/cycle_repository.dart';
 import 'package:laour_cycle_manager/domain/usecases/get_all_cycles.dart';
 import 'package:laour_cycle_manager/domain/usecases/get_current_user.dart';
 
-// [복원] 오늘의 할 일을 나타내는 데이터 클래스
+// [수정] 할 일에 OrderGuide를 포함시켜 어떤 주문인지 알 수 있도록 함
 class DailyTask {
   final Cycle cycle;
   final String description;
-  final bool isCompleted;
+  final OrderGuide guide; // 오늘의 미션 정보
+  final TaskType type;
+  bool isCompleted;
 
   DailyTask({
     required this.cycle,
     required this.description,
+    required this.guide,
+    required this.type,
     this.isCompleted = false,
   });
 }
+
+enum TaskType { enterResult, placeOrder }
 
 @injectable
 class DashboardViewModel extends ChangeNotifier {
   final GetAllCycles _getAllCyclesUseCase;
   final GetCurrentUser _getCurrentUserUseCase;
+  final CycleRepository _cycleRepository;
 
-  DashboardViewModel(this._getAllCyclesUseCase, this._getCurrentUserUseCase) {
+  DashboardViewModel(
+    this._getAllCyclesUseCase,
+    this._getCurrentUserUseCase,
+    this._cycleRepository,
+  ) {
     _listenToDataChanges();
   }
 
-  // 화면 상태 변수들
   bool _isLoading = true;
   UserProfile? _userProfile;
   List<Cycle> _cycles = [];
-  List<DailyTask> _tasks = []; // [복원] 오늘의 할 일 목록
+  List<DailyTask> _tasks = [];
   StreamSubscription? _cycleSubscription;
   StreamSubscription? _userSubscription;
 
-  // UI에서 상태를 읽기 위한 getter
   bool get isLoading => _isLoading;
   UserProfile? get userProfile => _userProfile;
   List<Cycle> get cycles => _cycles;
-  List<DailyTask> get tasks => _tasks; // [복원] 오늘의 할 일 getter
+  List<DailyTask> get tasks => _tasks;
 
   void _listenToDataChanges() {
     _userSubscription?.cancel();
@@ -51,37 +62,89 @@ class DashboardViewModel extends ChangeNotifier {
       
       if (user != null) {
         _cycleSubscription?.cancel();
-        _cycleSubscription = _getAllCyclesUseCase(user.uid).listen((cycleData) {
+        _cycleSubscription = _getAllCyclesUseCase(user.uid).listen((cycleData) async {
           _cycles = cycleData;
-          _generateDailyTasks(cycleData); // [수정] 사이클 데이터를 받아 할 일 목록 생성
+          await _generateDailyTasks(cycleData);
           _isLoading = false;
           notifyListeners();
         });
       } else {
         _userProfile = null;
         _cycles = [];
-        _tasks = []; // [수정] 로그아웃 시 할 일 목록도 초기화
+        _tasks = [];
         _isLoading = false;
         notifyListeners();
       }
     });
   }
 
-  // [복원] '오늘의 할 일' 목록을 생성하는 로직
-  void _generateDailyTasks(List<Cycle> cycles) {
+  // [핵심 수정] '오늘의 할 일' 목록 생성 시 OrderGuide를 함께 생성
+  Future<void> _generateDailyTasks(List<Cycle> cycles) async {
     final newTasks = <DailyTask>[];
+    final today = DateUtils.dateOnly(DateTime.now());
+
     for (var cycle in cycles) {
-      // TODO: 각 사이클 별로 할 일이 필요한지 판단하는 실제 로직 구현 필요
-      newTasks.add(DailyTask(
-        cycle: cycle,
-        description: "'${cycle.name}' 어제 주문 결과 입력",
-      ));
+      if (cycle.status != CycleStatus.inProgress) continue;
+
+      // TODO: 실제 주가 API 연동 필요
+      const double lastClosePrice = 54.0; 
+
+      final tradeRecords = await _cycleRepository.getTradeRecords(cycle.id);
+      final orderGuide = _determineOrderGuide(cycle, lastClosePrice, tradeRecords);
+
+      bool needsResultEntry = false;
+      if (tradeRecords.isNotEmpty) {
+        final lastTradeDate = DateUtils.dateOnly(tradeRecords.last.timestamp);
+        if (lastTradeDate.isBefore(today)) {
+          needsResultEntry = true;
+        }
+      }
+
+      if (needsResultEntry) {
+        newTasks.add(DailyTask(
+          cycle: cycle,
+          description: "'${cycle.name}' 어제 주문 결과 입력",
+          guide: orderGuide, // 계산된 OrderGuide 전달
+          type: TaskType.enterResult,
+        ));
+      }
+      
       newTasks.add(DailyTask(
         cycle: cycle,
         description: "'${cycle.name}' 오늘 주문 등록",
+        guide: orderGuide,
+        type: TaskType.placeOrder,
       ));
     }
     _tasks = newTasks;
+  }
+
+  // OrderGuide를 결정하는 로직 (CycleDetailViewModel에서 가져와 단순화)
+  OrderGuide _determineOrderGuide(Cycle cycle, double lastClosePrice, List<dynamic> tradeRecords) {
+    // 40회 매수가 끝났는지 확인
+    final plannedTradeCount = tradeRecords.where((r) => r.isPlanned).length;
+    if (plannedTradeCount >= cycle.divisionCount) {
+        return OrderGuide(
+            action: OrderActionType.addFunds,
+            ticker: cycle.ticker,
+            message: '모든 분할 매수가 완료되었습니다.',
+        );
+    }
+
+    final double quantityToBuy = cycle.amountPerDivision / lastClosePrice;
+    
+    return OrderGuide(
+      action: OrderActionType.locBuy,
+      ticker: cycle.ticker,
+      message: '지정가(LOC) 매수 주문을 넣으세요.',
+      price: lastClosePrice,
+      quantity: quantityToBuy,
+    );
+  }
+
+  void toggleTaskCompletion(DailyTask task) {
+      task.isCompleted = !task.isCompleted;
+      notifyListeners();
   }
 
   @override
